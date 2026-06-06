@@ -1,0 +1,8 @@
+.gradle/
+**/build/
+*.apk
+*.aab
+*.log
+*.tmp
+.DS_Store
+chatgpt-reader-pixel8-delivery.zip

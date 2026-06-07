@@ -15,9 +15,12 @@ public class ReaderTileService extends TileService {
     public void onClick() {
         super.onClick();
         if (!AccessibilityStatus.isServiceEnabled(this)) {
-            ReaderState.setReaderEnabled(this, false);
+            ReaderState.setMode(this, ReaderMode.OFF);
+            ReaderCommandBus.send(this, ReaderCommandBus.COMMAND_OFF);
         } else {
-            ReaderState.setReaderEnabled(this, !ReaderState.isReaderEnabled(this));
+            boolean enable = !ReaderState.isReaderEnabled(this);
+            ReaderState.setMode(this, enable ? ReaderMode.ON : ReaderMode.OFF);
+            ReaderCommandBus.send(this, enable ? ReaderCommandBus.COMMAND_ON : ReaderCommandBus.COMMAND_OFF);
         }
         ReaderNotificationController.update(this);
         updateTile();
@@ -31,9 +34,12 @@ public class ReaderTileService extends TileService {
         if (!AccessibilityStatus.isServiceEnabled(this)) {
             tile.setState(Tile.STATE_UNAVAILABLE);
             setSubtitle(tile, "AccessibilityService 未設定");
-        } else if (ReaderState.isReaderEnabled(this)) {
+        } else if (ReaderState.getMode(this) == ReaderMode.ON) {
             tile.setState(Tile.STATE_ACTIVE);
             setSubtitle(tile, "有効");
+        } else if (ReaderState.getMode(this) == ReaderMode.PAUSED) {
+            tile.setState(Tile.STATE_INACTIVE);
+            setSubtitle(tile, "一時停止");
         } else {
             tile.setState(Tile.STATE_INACTIVE);
             setSubtitle(tile, "無効");

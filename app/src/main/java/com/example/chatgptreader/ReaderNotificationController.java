@@ -21,7 +21,8 @@ public final class ReaderNotificationController {
 
     @SuppressLint("MissingPermission")
     public static void update(Context context) {
-        if (!ReaderState.isReaderEnabled(context) && !"speaking".equals(ReaderState.getTtsState(context))) {
+        ReaderMode mode = ReaderState.getMode(context);
+        if (mode == ReaderMode.OFF) {
             NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID);
             return;
         }
@@ -37,19 +38,24 @@ public final class ReaderNotificationController {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_reader)
                 .setContentTitle("ChatGPT Reader")
-                .setContentText(ReaderState.isReaderEnabled(context) ? "有効" : "一時停止中")
+                .setContentText(mode == ReaderMode.ON ? "有効 " + ReaderSettingsRepository.formatRate(ReaderSettingsRepository.getSpeechRate(context)) : "一時停止中")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(false)
                 .setContentIntent(contentIntent);
 
-        if (ReaderState.isReaderEnabled(context)) {
+        if (mode == ReaderMode.ON) {
             builder.addAction(action(context, "一時停止", ReaderActionReceiver.ACTION_PAUSE, 1));
             builder.addAction(action(context, "停止", ReaderActionReceiver.ACTION_STOP, 2));
-        } else {
+        } else if (mode == ReaderMode.PAUSED) {
             builder.addAction(action(context, "再開", ReaderActionReceiver.ACTION_RESUME, 3));
+            builder.addAction(action(context, "停止", ReaderActionReceiver.ACTION_STOP, 2));
         }
         builder.addAction(action(context, "既読リセット", ReaderActionReceiver.ACTION_RESET_READ, 4));
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build());
+    }
+
+    public static void cancel(Context context) {
+        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID);
     }
 
     private static NotificationCompat.Action action(Context context, String title, String action, int requestCode) {
@@ -61,9 +67,6 @@ public final class ReaderNotificationController {
     }
 
     private static void ensureChannel(Context context) {
-        if (Build.VERSION.SDK_INT < 26) {
-            return;
-        }
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         NotificationChannel existing = manager.getNotificationChannel(CHANNEL_ID);
         if (existing != null) {

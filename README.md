@@ -6,6 +6,7 @@ ChatGPT Reader は Pixel 8 単体で APK の取得、インストール、ChatGP
 
 - `AccessibilityService`: ChatGPT アプリの画面内容だけを読み取り、読み上げ候補数、除外数、検出状態を診断に記録します。設定ファイルの `android:packageNames` は `com.openai.chatgpt` のみです。
 - `TileService`: Pixel 8 のクイック設定から Reader の ON/OFF を切り替えます。長押しはアプリ設定画面を開くための QS tile preferences intent に対応しています。
+- `SpeedTileService`: クイック設定から読み上げ速度を `0.8x → 1.0x → 1.2x → 1.5x → 2.0x` の順に切り替えます。
 - 通知: Reader が有効または読み上げ状態のときだけ低優先度通知を表示します。通知アクションは一時停止、再開、停止、既読リセットです。不要な常駐サービスは追加していません。
 - 診断レポート: ユーザーが `診断レポートを出力` を押した場合のみ cache 配下に UTF-8 JSON を作成し、Android Share Sheet で手動共有します。外部サーバーへの自動送信は行わず、`INTERNET` 権限も使いません。
 
@@ -41,10 +42,11 @@ ChatGPT Reader は Pixel 8 単体で APK の取得、インストール、ChatGP
 
 1. Pixel 8 の画面上端から 2 回下へスワイプして、クイック設定を大きく表示します。
 2. 鉛筆アイコンをタップします。
-3. 下の未追加タイル一覧から `ChatGPT Reader` を探します。
-4. `ChatGPT Reader` を長押しして、上のクイック設定エリアへドラッグします。
+3. 下の未追加タイル一覧から `ChatGPT Reader` と `Reader Speed` を探します。
+4. `ChatGPT Reader` と `Reader Speed` を長押しして、上のクイック設定エリアへドラッグします。
 5. 戻る操作で編集を終了します。
 6. ChatGPT を開いたままクイック設定を下ろし、`ChatGPT Reader` タイルをタップすると ON/OFF を切り替えられます。
+7. `Reader Speed` タイルをタップすると読み上げ速度を切り替えられます。
 
 タイル表示は次の意味です。
 
@@ -52,13 +54,16 @@ ChatGPT Reader は Pixel 8 単体で APK の取得、インストール、ChatGP
 - `無効`: Reader OFF
 - `AccessibilityService 未設定`: ユーザー補助設定がまだ OFF
 
+Reader を OFF にすると、現在の音声と待機中の読み上げキューは即時停止します。`一時停止` は通知を残し、通知の `再開` から戻せます。`停止` は通知を消します。
+
 ## ChatGPT で読み上げ確認する
 
 1. Pixel 8 で ChatGPT アプリを開きます。
 2. ChatGPT Reader のクイック設定タイルを `有効` にします。
 3. ChatGPT の会話画面を表示し、回答文が表示される状態にします。
-4. ChatGPT Reader の通知が表示された場合は、通知から `一時停止`、`再開`、`停止`、`既読リセット` を操作できます。
-5. 通知をタップすると ChatGPT Reader の設定画面に戻ります。
+4. 読み上げ速度を変えたい場合は、ChatGPT を開いたままクイック設定の `Reader Speed` タイルをタップします。次の読み上げ文から速度が反映されます。
+5. ChatGPT Reader の通知が表示された場合は、通知から `一時停止`、`再開`、`停止`、`既読リセット` を操作できます。
+6. 通知をタップすると ChatGPT Reader の設定画面に戻ります。
 
 ## 診断レポートを出力して共有する
 
@@ -69,7 +74,7 @@ ChatGPT Reader は Pixel 8 単体で APK の取得、インストール、ChatGP
 5. Android Share Sheet が開いたら、Gmail、Google Drive、Slack など共有先を選びます。
 6. 共有後にログを消したい場合は `診断ログを消去` をタップします。
 
-診断レポートには `generatedAt`、`appVersion`、`buildCommitSha`、端末情報、Android バージョン、AccessibilityService 状態、Reader 状態、TTS 状態、`targetPackage`、`targetPackageDetected`、イベント数、候補数、除外数、読み上げ数、エラー、直近診断イベントが含まれます。
+診断レポートには `generatedAt`、`appVersion`、`buildCommitSha`、端末情報、Android バージョン、AccessibilityService 状態、`accessibilityServiceConfigured`、`accessibilityServiceConnected`、Reader 状態、読み上げ速度、TTS 状態、`targetPackage`、`targetPackageDetected`、イベント数、候補数、除外数、読み上げ数、エラー、直近診断イベントが含まれます。
 
 ## 修正版 APK を上書きインストールする
 

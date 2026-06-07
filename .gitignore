@@ -2,7 +2,7 @@
 **/build/
 *.apk
 *.aab
+*.zip
 *.log
 *.tmp
 .DS_Store
-chatgpt-reader-pixel8-delivery.zip

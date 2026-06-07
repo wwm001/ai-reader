@@ -13,14 +13,17 @@ public class ReaderActionReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent == null ? "" : intent.getAction();
-        if (ACTION_PAUSE.equals(action) || ACTION_STOP.equals(action)) {
-            ReaderState.setReaderEnabled(context, false);
-            ReaderState.setTtsState(context, ACTION_STOP.equals(action) ? "stopped" : "paused");
+        if (ACTION_PAUSE.equals(action)) {
+            ReaderState.setMode(context, ReaderMode.PAUSED);
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_PAUSE);
+        } else if (ACTION_STOP.equals(action)) {
+            ReaderState.setMode(context, ReaderMode.OFF);
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_STOP);
         } else if (ACTION_RESUME.equals(action)) {
-            ReaderState.setReaderEnabled(context, true);
-            ReaderState.setTtsState(context, "ready");
+            ReaderState.setMode(context, ReaderMode.ON);
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESUME);
         } else if (ACTION_RESET_READ.equals(action)) {
-            ReaderState.resetReadState(context);
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESET_READ);
         }
         ReaderNotificationController.update(context);
     }

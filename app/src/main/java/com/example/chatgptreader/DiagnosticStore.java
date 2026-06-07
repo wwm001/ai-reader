@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.TimeZone;
 
 public final class DiagnosticStore {
-    private static final int MAX_EVENTS = 80;
+    private static final int MAX_EVENTS = 100;
     private static final int MAX_ERRORS = 20;
     private static final int MAX_SNIPPETS = 20;
     private static final DiagnosticStore INSTANCE = new DiagnosticStore();
@@ -21,6 +21,7 @@ public final class DiagnosticStore {
     private final ArrayDeque<JSONObject> events = new ArrayDeque<>();
     private final ArrayDeque<String> errors = new ArrayDeque<>();
     private final ArrayDeque<String> snippets = new ArrayDeque<>();
+    private final java.util.LinkedHashSet<String> snippetSet = new java.util.LinkedHashSet<>();
     private final Map<String, Integer> eventTypeCounts = new LinkedHashMap<>();
 
     private DiagnosticStore() {
@@ -59,16 +60,25 @@ public final class DiagnosticStore {
         if (text == null || text.isEmpty()) {
             return;
         }
-        snippets.addLast(limitSnippet(text));
-        while (snippets.size() > MAX_SNIPPETS) {
-            snippets.removeFirst();
+        String snippet = limitSnippet(text);
+        if (!snippetSet.add(snippet)) {
+            return;
         }
+        snippets.addLast(snippet);
+        while (snippets.size() > MAX_SNIPPETS) {
+            snippetSet.remove(snippets.removeFirst());
+        }
+    }
+
+    public synchronized void clearSnippets() {
+        snippets.clear();
+        snippetSet.clear();
     }
 
     public synchronized void clear() {
         events.clear();
         errors.clear();
-        snippets.clear();
+        clearSnippets();
         eventTypeCounts.clear();
     }
 

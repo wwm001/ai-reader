@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,6 +23,7 @@ public class MainActivity extends android.app.Activity {
     private static final int REQ_NOTIFICATIONS = 42;
 
     private TextView status;
+    private TextView speedLabel;
     private CheckBox includeSnippets;
 
     @Override
@@ -49,7 +51,9 @@ public class MainActivity extends android.app.Activity {
         Button toggle = new Button(this);
         toggle.setText("Reader ON / OFF");
         toggle.setOnClickListener(v -> {
-            ReaderState.setReaderEnabled(this, !ReaderState.isReaderEnabled(this));
+            boolean enable = !ReaderState.isReaderEnabled(this);
+            ReaderState.setMode(this, enable ? ReaderMode.ON : ReaderMode.OFF);
+            ReaderCommandBus.send(this, enable ? ReaderCommandBus.COMMAND_ON : ReaderCommandBus.COMMAND_OFF);
             ReaderNotificationController.update(this);
             refreshStatus();
         });
@@ -62,7 +66,36 @@ public class MainActivity extends android.app.Activity {
 
         includeSnippets = new CheckBox(this);
         includeSnippets.setText("診断用テキスト断片を含める ON / OFF");
+        includeSnippets.setChecked(ReaderState.shouldIncludeDiagnosticSnippets(this));
+        includeSnippets.setOnCheckedChangeListener((buttonView, isChecked) -> ReaderState.setIncludeDiagnosticSnippets(this, isChecked));
         root.addView(includeSnippets);
+
+        speedLabel = new TextView(this);
+        speedLabel.setTextSize(16);
+        speedLabel.setPadding(0, dp(12), 0, 0);
+        root.addView(speedLabel);
+
+        SeekBar speed = new SeekBar(this);
+        speed.setMax(15);
+        speed.setProgress(rateToProgress(ReaderSettingsRepository.getSpeechRate(this)));
+        speed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    ReaderSettingsRepository.setSpeechRate(MainActivity.this, progressToRate(progress));
+                    refreshStatus();
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+        root.addView(speed);
 
         Button export = new Button(this);
         export.setText("診断レポートを出力");
@@ -94,15 +127,20 @@ public class MainActivity extends android.app.Activity {
                 + "AccessibilityService の状態: " + enabledText(AccessibilityStatus.isServiceEnabled(this)) + "\n"
                 + "ChatGPT 検出状態: " + detectedText(ReaderState.isTargetDetected(this)) + "\n"
                 + "TTS 状態: " + ReaderState.getTtsState(this) + "\n"
-                + "Reader: " + enabledText(ReaderState.isReaderEnabled(this)) + "\n"
+                + "Reader: " + ReaderState.getMode(this).name() + "\n"
+                + "読み上げ速度: " + ReaderSettingsRepository.formatRate(ReaderSettingsRepository.getSpeechRate(this)) + "\n"
                 + "対象 packageName: " + ReaderState.TARGET_PACKAGE + "\n"
                 + "直近の読み上げ候補数: " + ReaderState.getCandidateCount(this) + "\n"
                 + "直近の除外候補数: " + ReaderState.getExcludedCount(this);
         status.setText(text);
+        if (speedLabel != null) {
+            speedLabel.setText("読み上げ速度 " + ReaderSettingsRepository.formatRate(ReaderSettingsRepository.getSpeechRate(this)));
+        }
     }
 
     private void shareDiagnosticReport(View view) {
         try {
+            ReaderState.setIncludeDiagnosticSnippets(this, includeSnippets.isChecked());
             Uri uri = DiagnosticReportWriter.write(this, includeSnippets.isChecked());
             Intent share = new Intent(Intent.ACTION_SEND);
             share.setType("application/json");
@@ -132,5 +170,13 @@ public class MainActivity extends android.app.Activity {
 
     private static String detectedText(boolean detected) {
         return detected ? "検出中" : "未検出";
+    }
+
+    private static int rateToProgress(float rate) {
+        return Math.round((ReaderSettingsRepository.clampSpeechRate(rate) - 0.5f) * 10f);
+    }
+
+    private static float progressToRate(int progress) {
+        return ReaderSettingsRepository.clampSpeechRate(0.5f + progress / 10f);
     }
 }

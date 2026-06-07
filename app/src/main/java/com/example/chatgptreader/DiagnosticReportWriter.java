@@ -27,7 +27,12 @@ public final class DiagnosticReportWriter {
         report.put("androidVersion", Build.VERSION.RELEASE);
         report.put("sdkInt", Build.VERSION.SDK_INT);
         report.put("accessibilityServiceEnabled", AccessibilityStatus.isServiceEnabled(context));
+        report.put("accessibilityServiceConfigured", AccessibilityStatus.isServiceConfigured(context));
+        report.put("accessibilityServiceConnected", AccessibilityStatus.isServiceConnected(context));
+        report.put("accessibilityServiceEnabledRawValue", ReaderState.getAccessibilityRawValue(context));
         report.put("readerEnabled", ReaderState.isReaderEnabled(context));
+        report.put("readerMode", ReaderState.getMode(context).name());
+        report.put("speechRate", ReaderSettingsRepository.getSpeechRate(context));
         report.put("ttsState", ReaderState.getTtsState(context));
         report.put("targetPackage", ReaderState.TARGET_PACKAGE);
         report.put("targetPackageDetected", ReaderState.isTargetDetected(context));
@@ -36,8 +41,10 @@ public final class DiagnosticReportWriter {
         report.put("candidateNodeCount", ReaderState.getCandidateCount(context));
         report.put("excludedNodeCount", ReaderState.getExcludedCount(context));
         report.put("queuedUtteranceCount", ReaderState.getQueuedCount(context));
+        report.put("startedUtteranceCount", ReaderState.getStartedCount(context));
         report.put("spokenUtteranceCount", ReaderState.getSpokenCount(context));
         report.put("skippedAsReadCount", ReaderState.getSkippedCount(context));
+        report.put("ttsErrorCount", ReaderState.getTtsErrorCount(context));
         report.put("recentErrors", store.recentErrorsJson());
         report.put("recentDiagnosticEvents", store.recentEventsJson());
         if (includeSnippets) {

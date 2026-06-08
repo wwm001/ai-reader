@@ -12,4 +12,9 @@ public class DebouncePolicyTest {
         Assert.assertEquals(250L, DebouncePolicy.delayForEventType(AccessibilityEvent.TYPE_VIEW_SCROLLED));
         Assert.assertEquals(0L, DebouncePolicy.delayForEventType(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED));
     }
+
+    @Test
+    public void readyModeStillMonitorsNewScrollEvents() {
+        Assert.assertTrue(ReaderMode.READY.isReadingEnabled());
+    }
 }

@@ -11,4 +11,11 @@ public class NaturalTextChunkerTest {
         Assert.assertTrue(NaturalTextChunker.chunk(text).size() >= 1);
         Assert.assertTrue(NaturalTextChunker.chunk("短い").isEmpty());
     }
+
+    @Test
+    public void chunksNewlinesAndBullets() {
+        String text = "これは見出しです\n・最初の項目です\n・二番目の項目です";
+
+        Assert.assertEquals(3, NaturalTextChunker.chunk(text).size());
+    }
 }

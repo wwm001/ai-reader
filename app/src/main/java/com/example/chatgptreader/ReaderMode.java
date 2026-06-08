@@ -10,7 +10,7 @@ public enum ReaderMode {
     OFF;
 
     public boolean isReadingEnabled() {
-        return this == PLAYING || this == ON;
+        return this == PLAYING || this == READY || this == ON;
     }
 
     public boolean keepsNotification() {

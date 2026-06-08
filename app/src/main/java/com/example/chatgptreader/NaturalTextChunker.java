@@ -11,7 +11,7 @@ public final class NaturalTextChunker {
     }
 
     public static List<String> chunk(String text) {
-        String normalized = TextNormalizer.normalize(text);
+        String normalized = TextNormalizer.normalizeForChunking(text);
         List<String> chunks = new ArrayList<>();
         if (normalized.length() < MIN_CHUNK) {
             return chunks;
@@ -21,7 +21,10 @@ public final class NaturalTextChunker {
             char ch = normalized.charAt(i);
             current.append(ch);
             boolean boundary = isBoundary(ch);
-            if ((boundary && current.length() >= 40) || current.length() >= MAX_CHUNK) {
+            boolean strongBoundary = ch == '\n' || ch == '■' || ch == '●' || ch == '◆';
+            if ((strongBoundary && current.length() >= MIN_CHUNK)
+                    || (boundary && current.length() >= 40)
+                    || current.length() >= MAX_CHUNK) {
                 addChunk(chunks, current);
             }
         }
@@ -41,7 +44,7 @@ public final class NaturalTextChunker {
     }
 
     private static void addChunk(List<String> chunks, StringBuilder current) {
-        String value = TextNormalizer.normalize(current.toString());
+        String value = TextNormalizer.normalizeForFingerprint(current.toString());
         current.setLength(0);
         if (value.length() >= MIN_CHUNK) {
             chunks.add(value);

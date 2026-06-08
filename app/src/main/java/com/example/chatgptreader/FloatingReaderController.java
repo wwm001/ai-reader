@@ -31,11 +31,19 @@ public final class FloatingReaderController {
     private float startRawY;
     private boolean moved;
     private boolean shutdownFired;
+    private boolean holdCancelledByDrag;
+    private final FloatingTapActionBuffer tapActionBuffer = new FloatingTapActionBuffer();
+
+    private final Runnable singleTapCommit = () -> {
+        if (tapActionBuffer.consumeSingleIfPending()) {
+            executeSingleTap();
+        }
+    };
 
     private final Runnable holdProgress = new Runnable() {
         @Override
         public void run() {
-            if (button == null || downAt == 0L) {
+            if (button == null || downAt == 0L || holdCancelledByDrag) {
                 return;
             }
             long elapsed = SystemClock.uptimeMillis() - downAt;
@@ -107,6 +115,7 @@ public final class FloatingReaderController {
                 startRawY = event.getRawY();
                 moved = false;
                 shutdownFired = false;
+                holdCancelledByDrag = false;
                 button.shortHaptic();
                 handler.post(holdProgress);
                 return true;
@@ -115,6 +124,12 @@ public final class FloatingReaderController {
                 float dy = event.getRawY() - startRawY;
                 if (Math.hypot(dx, dy) > dp(MOVE_SLOP_DP)) {
                     moved = true;
+                    holdCancelledByDrag = true;
+                    shutdownFired = false;
+                    handler.removeCallbacks(holdProgress);
+                    if (button != null) {
+                        button.setHoldProgress(0f);
+                    }
                     params.x = startX + Math.round(dx);
                     params.y = startY + Math.round(dy);
                     windowManager.updateViewLayout(button, params);
@@ -143,19 +158,27 @@ public final class FloatingReaderController {
 
     private void handleGesture(FloatingReaderGestureDetector.Gesture gesture) {
         if (gesture == FloatingReaderGestureDetector.Gesture.SINGLE_TAP) {
-            DiagnosticCounters.inc(DiagnosticCounters.FLOATING_SINGLE_TAP);
-            ReaderMode mode = ReaderState.getMode(context);
-            if (mode == ReaderMode.PLAYING) {
-                ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_PAUSE);
-            } else {
-                ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESUME);
-            }
+            tapActionBuffer.onSingleCandidate();
+            handler.removeCallbacks(singleTapCommit);
+            handler.postDelayed(singleTapCommit, FloatingReaderGestureDetector.DOUBLE_TAP_MS);
         } else if (gesture == FloatingReaderGestureDetector.Gesture.DOUBLE_TAP) {
+            handler.removeCallbacks(singleTapCommit);
+            tapActionBuffer.onDoubleTap();
             DiagnosticCounters.inc(DiagnosticCounters.FLOATING_DOUBLE_TAP);
             ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_SCROLL_TOP);
         } else if (gesture == FloatingReaderGestureDetector.Gesture.LONG_PRESS_SPEED) {
             DiagnosticCounters.inc(DiagnosticCounters.FLOATING_LONG_PRESS_SPEED);
             showSpeedMenu();
+        }
+    }
+
+    private void executeSingleTap() {
+        DiagnosticCounters.inc(DiagnosticCounters.FLOATING_SINGLE_TAP);
+        ReaderMode mode = ReaderState.getMode(context);
+        if (mode == ReaderMode.PLAYING) {
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_PAUSE);
+        } else {
+            ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESUME);
         }
     }
 

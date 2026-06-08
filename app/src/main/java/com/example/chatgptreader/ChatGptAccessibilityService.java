@@ -25,7 +25,7 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
     private final Runnable scanRunnable = this::scanCurrentWindow;
     private final ReadHistory readHistory = new ReadHistory();
     private final SpeechQueue speechQueue = new SpeechQueue(readHistory);
-    private final FloatingReaderController floatingReaderController = new FloatingReaderController(this);
+    private FloatingReaderController floatingReaderController;
     private final BroadcastReceiver commandReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -49,6 +49,7 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
     @Override
     public void onCreate() {
         super.onCreate();
+        floatingReaderController = new FloatingReaderController(this);
         tts = new TextToSpeech(this, this);
         IntentFilter filter = new IntentFilter(ReaderCommandBus.ACTION_COMMAND);
         ContextCompat.registerReceiver(this, commandReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -104,7 +105,9 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
             tts.stop();
             tts.shutdown();
         }
-        floatingReaderController.destroy();
+        if (floatingReaderController != null) {
+            floatingReaderController.destroy();
+        }
         super.onDestroy();
     }
 
@@ -141,6 +144,12 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
             if (ReaderState.getMode(this) == ReaderMode.SHUTDOWN) {
                 ReaderState.setMode(this, ReaderMode.READY);
             }
+            handler.post(() -> {
+                if (ReaderState.isReaderEnabled(ChatGptAccessibilityService.this)) {
+                    forceRescanNow();
+                }
+                speakNextIfIdle();
+            });
         } else {
             ReaderState.setTtsState(this, "error");
             DiagnosticStore.get().event("ttsInitFailed", String.valueOf(status));
@@ -152,6 +161,7 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
             if (tts == null) {
                 destroyedByShutdown = false;
                 tts = new TextToSpeech(this, this);
+                ttsReady = false;
             }
             ReaderMode previous = ReaderState.getMode(this);
             if (previous == ReaderMode.PAUSED) {
@@ -161,7 +171,7 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
             }
             ReaderState.setMode(this, ReaderMode.PLAYING);
             ReaderState.setTtsState(this, "ready");
-            if (ReaderState.isTargetDetected(this)) {
+            if (ReaderState.isTargetDetected(this) && floatingReaderController != null) {
                 floatingReaderController.show();
             }
             ReaderNotificationController.update(this);
@@ -359,7 +369,12 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
 
     private void updateOverlayVisibility(boolean targetDetected) {
         if (destroyedByShutdown || ReaderState.getMode(this) == ReaderMode.SHUTDOWN) {
-            floatingReaderController.hide();
+            if (floatingReaderController != null) {
+                floatingReaderController.hide();
+            }
+            return;
+        }
+        if (floatingReaderController == null) {
             return;
         }
         if (targetDetected) {
@@ -435,7 +450,9 @@ public class ChatGptAccessibilityService extends AccessibilityService implements
         DiagnosticStore.get().event("readerShutdownByFiveSecondHold", "true");
         stopPlayback("shutdown", false);
         ReaderState.setMode(this, ReaderMode.SHUTDOWN);
-        floatingReaderController.hide();
+        if (floatingReaderController != null) {
+            floatingReaderController.hide();
+        }
         if (tts != null) {
             tts.shutdown();
             ttsReady = false;

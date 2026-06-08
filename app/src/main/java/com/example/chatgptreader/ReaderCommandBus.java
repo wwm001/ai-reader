@@ -15,6 +15,8 @@ public final class ReaderCommandBus {
     public static final String COMMAND_RESET_READ = "RESET_READ";
     public static final String COMMAND_RESCAN = "RESCAN";
     public static final String COMMAND_RATE_CHANGED = "RATE_CHANGED";
+    public static final String COMMAND_SCROLL_TOP = "SCROLL_TOP";
+    public static final String COMMAND_SHUTDOWN = "SHUTDOWN";
 
     private ReaderCommandBus() {
     }

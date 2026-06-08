@@ -52,7 +52,7 @@ public class MainActivity extends android.app.Activity {
         toggle.setText("Reader ON / OFF");
         toggle.setOnClickListener(v -> {
             boolean enable = !ReaderState.isReaderEnabled(this);
-            ReaderState.setMode(this, enable ? ReaderMode.ON : ReaderMode.OFF);
+            ReaderState.setMode(this, enable ? ReaderMode.PLAYING : ReaderMode.STOPPED);
             ReaderCommandBus.send(this, enable ? ReaderCommandBus.COMMAND_ON : ReaderCommandBus.COMMAND_OFF);
             ReaderNotificationController.update(this);
             refreshStatus();

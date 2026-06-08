@@ -1,11 +1,29 @@
 package com.example.chatgptreader;
 
 public enum ReaderMode {
-    ON,
+    READY,
+    PLAYING,
     PAUSED,
+    STOPPED,
+    SHUTDOWN,
+    ON,
     OFF;
 
     public boolean isReadingEnabled() {
-        return this == ON;
+        return this == PLAYING || this == ON;
+    }
+
+    public boolean keepsNotification() {
+        return this == PLAYING || this == PAUSED || this == READY || this == ON;
+    }
+
+    public ReaderMode normalized() {
+        if (this == ON) {
+            return PLAYING;
+        }
+        if (this == OFF) {
+            return STOPPED;
+        }
+        return this;
     }
 }

@@ -19,7 +19,7 @@ public class ReaderTileService extends TileService {
             ReaderCommandBus.send(this, ReaderCommandBus.COMMAND_OFF);
         } else {
             boolean enable = !ReaderState.isReaderEnabled(this);
-            ReaderState.setMode(this, enable ? ReaderMode.ON : ReaderMode.OFF);
+            ReaderState.setMode(this, enable ? ReaderMode.PLAYING : ReaderMode.STOPPED);
             ReaderCommandBus.send(this, enable ? ReaderCommandBus.COMMAND_ON : ReaderCommandBus.COMMAND_OFF);
         }
         ReaderNotificationController.update(this);
@@ -34,7 +34,7 @@ public class ReaderTileService extends TileService {
         if (!AccessibilityStatus.isServiceEnabled(this)) {
             tile.setState(Tile.STATE_UNAVAILABLE);
             setSubtitle(tile, "AccessibilityService 未設定");
-        } else if (ReaderState.getMode(this) == ReaderMode.ON) {
+        } else if (ReaderState.getMode(this) == ReaderMode.PLAYING || ReaderState.getMode(this) == ReaderMode.READY) {
             tile.setState(Tile.STATE_ACTIVE);
             setSubtitle(tile, "有効");
         } else if (ReaderState.getMode(this) == ReaderMode.PAUSED) {

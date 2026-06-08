@@ -24,6 +24,10 @@ public final class ReadHistory {
         return true;
     }
 
+    public synchronized boolean isSpoken(String fingerprint) {
+        return fingerprint != null && spoken.contains(fingerprint);
+    }
+
     public synchronized void markCurrent(String fingerprint) {
         current = fingerprint;
         pending.remove(fingerprint);

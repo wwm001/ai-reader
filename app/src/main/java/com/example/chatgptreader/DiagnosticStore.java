@@ -23,6 +23,8 @@ public final class DiagnosticStore {
     private final ArrayDeque<String> snippets = new ArrayDeque<>();
     private final java.util.LinkedHashSet<String> snippetSet = new java.util.LinkedHashSet<>();
     private final Map<String, Integer> eventTypeCounts = new LinkedHashMap<>();
+    private final Map<String, Integer> counters = new LinkedHashMap<>();
+    private final Map<String, String> gauges = new LinkedHashMap<>();
 
     private DiagnosticStore() {
     }
@@ -45,6 +47,42 @@ public final class DiagnosticStore {
         while (events.size() > MAX_EVENTS) {
             events.removeFirst();
         }
+    }
+
+    public synchronized void increment(String name) {
+        counters.put(name, counters.containsKey(name) ? counters.get(name) + 1 : 1);
+    }
+
+    public synchronized int counter(String name) {
+        return counters.containsKey(name) ? counters.get(name) : 0;
+    }
+
+    public synchronized JSONObject countersJson() throws JSONException {
+        JSONObject object = new JSONObject();
+        for (Map.Entry<String, Integer> entry : counters.entrySet()) {
+            object.put(entry.getKey(), entry.getValue());
+        }
+        return object;
+    }
+
+    public synchronized void gauge(String name, int value) {
+        gauges.put(name, String.valueOf(value));
+    }
+
+    public synchronized void gauge(String name, String value) {
+        gauges.put(name, value == null ? "" : value);
+    }
+
+    public synchronized int gaugeInt(String name) {
+        try {
+            return Integer.parseInt(gauges.containsKey(name) ? gauges.get(name) : "0");
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    public synchronized String gaugeString(String name) {
+        return gauges.containsKey(name) ? gauges.get(name) : "";
     }
 
     public synchronized void error(Throwable throwable) {
@@ -80,6 +118,8 @@ public final class DiagnosticStore {
         errors.clear();
         clearSnippets();
         eventTypeCounts.clear();
+        counters.clear();
+        gauges.clear();
     }
 
     public synchronized JSONObject eventTypeCountsJson() throws JSONException {

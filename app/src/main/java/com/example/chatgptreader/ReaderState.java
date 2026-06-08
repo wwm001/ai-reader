@@ -21,6 +21,10 @@ public final class ReaderState {
     private static final String KEY_TTS_ERROR = "tts_error_count";
     private static final String KEY_SPEECH_RATE = "speech_rate";
     private static final String KEY_INCLUDE_SNIPPETS = "include_snippets";
+    private static final String KEY_OVERLAY_X = "overlay_x";
+    private static final String KEY_OVERLAY_Y = "overlay_y";
+    private static final String KEY_OVERLAY_VISIBLE = "overlay_visible";
+    private static final String KEY_READ_CURSOR = "read_cursor";
 
     public static final String TARGET_PACKAGE = "com.openai.chatgpt";
 
@@ -36,28 +40,29 @@ public final class ReaderState {
     }
 
     public static void setReaderEnabled(Context context, boolean enabled) {
-        setMode(context, enabled ? ReaderMode.ON : ReaderMode.OFF);
+        setMode(context, enabled ? ReaderMode.PLAYING : ReaderMode.STOPPED);
         DiagnosticStore.get().event("readerEnabled", String.valueOf(enabled));
     }
 
     public static ReaderMode getMode(Context context) {
         String value = prefs(context).getString(KEY_MODE, null);
         if (value == null) {
-            return prefs(context).getBoolean(KEY_ENABLED, false) ? ReaderMode.ON : ReaderMode.OFF;
+            return prefs(context).getBoolean(KEY_ENABLED, false) ? ReaderMode.PLAYING : ReaderMode.STOPPED;
         }
         try {
-            return ReaderMode.valueOf(value);
+            return ReaderMode.valueOf(value).normalized();
         } catch (IllegalArgumentException ignored) {
-            return ReaderMode.OFF;
+            return ReaderMode.STOPPED;
         }
     }
 
     public static void setMode(Context context, ReaderMode mode) {
+        ReaderMode normalized = mode.normalized();
         prefs(context).edit()
-                .putString(KEY_MODE, mode.name())
-                .putBoolean(KEY_ENABLED, mode == ReaderMode.ON)
+                .putString(KEY_MODE, normalized.name())
+                .putBoolean(KEY_ENABLED, normalized.isReadingEnabled())
                 .apply();
-        DiagnosticStore.get().event("readerMode", mode.name());
+        DiagnosticStore.get().event("readerMode", normalized.name());
     }
 
     public static String getTtsState(Context context) {
@@ -181,6 +186,39 @@ public final class ReaderState {
         if (!include) {
             DiagnosticStore.get().clearSnippets();
         }
+    }
+
+    public static int getOverlayX(Context context, int fallback) {
+        return prefs(context).getInt(KEY_OVERLAY_X, fallback);
+    }
+
+    public static int getOverlayY(Context context, int fallback) {
+        return prefs(context).getInt(KEY_OVERLAY_Y, fallback);
+    }
+
+    public static void setOverlayPosition(Context context, int x, int y) {
+        prefs(context).edit().putInt(KEY_OVERLAY_X, x).putInt(KEY_OVERLAY_Y, y).apply();
+    }
+
+    public static boolean isOverlayVisible(Context context) {
+        return prefs(context).getBoolean(KEY_OVERLAY_VISIBLE, false);
+    }
+
+    public static void setOverlayVisible(Context context, boolean visible) {
+        prefs(context).edit().putBoolean(KEY_OVERLAY_VISIBLE, visible).apply();
+    }
+
+    public static String getOverlayPositionText(Context context) {
+        SharedPreferences preferences = prefs(context);
+        return preferences.getInt(KEY_OVERLAY_X, -1) + "," + preferences.getInt(KEY_OVERLAY_Y, -1);
+    }
+
+    public static String getReadCursor(Context context) {
+        return prefs(context).getString(KEY_READ_CURSOR, "");
+    }
+
+    public static void setReadCursor(Context context, String cursor) {
+        prefs(context).edit().putString(KEY_READ_CURSOR, cursor == null ? "" : cursor).apply();
     }
 
     private static void increment(Context context, String key) {

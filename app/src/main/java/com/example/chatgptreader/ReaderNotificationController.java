@@ -22,7 +22,7 @@ public final class ReaderNotificationController {
     @SuppressLint("MissingPermission")
     public static void update(Context context) {
         ReaderMode mode = ReaderState.getMode(context);
-        if (mode == ReaderMode.OFF) {
+        if (mode == ReaderMode.STOPPED || mode == ReaderMode.SHUTDOWN) {
             NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID);
             return;
         }
@@ -38,12 +38,12 @@ public final class ReaderNotificationController {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_reader)
                 .setContentTitle("ChatGPT Reader")
-                .setContentText(mode == ReaderMode.ON ? "有効 " + ReaderSettingsRepository.formatRate(ReaderSettingsRepository.getSpeechRate(context)) : "一時停止中")
+                .setContentText(mode == ReaderMode.PLAYING ? "再生中 " + ReaderSettingsRepository.formatRate(ReaderSettingsRepository.getSpeechRate(context)) : mode == ReaderMode.READY ? "待機中" : "一時停止中")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(false)
                 .setContentIntent(contentIntent);
 
-        if (mode == ReaderMode.ON) {
+        if (mode == ReaderMode.PLAYING || mode == ReaderMode.READY) {
             builder.addAction(action(context, "一時停止", ReaderActionReceiver.ACTION_PAUSE, 1));
             builder.addAction(action(context, "停止", ReaderActionReceiver.ACTION_STOP, 2));
         } else if (mode == ReaderMode.PAUSED) {
@@ -51,6 +51,7 @@ public final class ReaderNotificationController {
             builder.addAction(action(context, "停止", ReaderActionReceiver.ACTION_STOP, 2));
         }
         builder.addAction(action(context, "既読リセット", ReaderActionReceiver.ACTION_RESET_READ, 4));
+        DiagnosticCounters.inc(DiagnosticCounters.NOTIFICATION_UPDATE);
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build());
     }
 

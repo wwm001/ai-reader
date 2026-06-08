@@ -17,10 +17,10 @@ public class ReaderActionReceiver extends BroadcastReceiver {
             ReaderState.setMode(context, ReaderMode.PAUSED);
             ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_PAUSE);
         } else if (ACTION_STOP.equals(action)) {
-            ReaderState.setMode(context, ReaderMode.OFF);
+            ReaderState.setMode(context, ReaderMode.STOPPED);
             ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_STOP);
         } else if (ACTION_RESUME.equals(action)) {
-            ReaderState.setMode(context, ReaderMode.ON);
+            ReaderState.setMode(context, ReaderMode.PLAYING);
             ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESUME);
         } else if (ACTION_RESET_READ.equals(action)) {
             ReaderCommandBus.send(context, ReaderCommandBus.COMMAND_RESET_READ);

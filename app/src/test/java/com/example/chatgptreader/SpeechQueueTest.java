@@ -39,6 +39,19 @@ public class SpeechQueueTest {
     }
 
     @Test
+    public void pause_keepsCurrentAtFrontOfQueue() {
+        ReadHistory history = new ReadHistory();
+        SpeechQueue queue = new SpeechQueue(history);
+        queue.enqueue("一時停止してから再開する文章です");
+        SpeechQueue.Utterance current = queue.next();
+
+        queue.pauseAndKeepCurrent();
+        SpeechQueue.Utterance resumed = queue.next();
+
+        Assert.assertEquals(current.fingerprint, resumed.fingerprint);
+    }
+
+    @Test
     public void resetReadHistory_clearsSpokenPendingAndCurrent() {
         ReadHistory history = new ReadHistory();
         SpeechQueue queue = new SpeechQueue(history);

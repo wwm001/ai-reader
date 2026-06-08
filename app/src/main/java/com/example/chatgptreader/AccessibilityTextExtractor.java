@@ -14,10 +14,10 @@ public final class AccessibilityTextExtractor {
     private AccessibilityTextExtractor() {
     }
 
-    public static Result extract(AccessibilityNodeInfo root) {
+    public static Result extract(AccessibilityNodeInfo root, float density, int screenHeight) {
         List<Candidate> candidates = new ArrayList<>();
         Counts counts = new Counts();
-        collect(root, candidates, counts);
+        collect(root, candidates, counts, density, screenHeight);
         candidates.sort(Comparator
                 .comparingInt((Candidate candidate) -> candidate.bounds.top)
                 .thenComparingInt(candidate -> candidate.bounds.left));
@@ -27,15 +27,16 @@ public final class AccessibilityTextExtractor {
         for (Candidate candidate : candidates) {
             String fingerprint = TextNormalizer.fingerprint(candidate.text);
             if (seen.add(fingerprint)) {
-                deduped.add(candidate.text);
+                deduped.addAll(NaturalTextChunker.chunk(candidate.text));
             } else {
                 counts.excluded++;
+                DiagnosticCounters.inc(DiagnosticCounters.EXCLUDED_DUPLICATE);
             }
         }
         return new Result(deduped, counts.extracted, deduped.size(), counts.excluded);
     }
 
-    private static void collect(AccessibilityNodeInfo node, List<Candidate> candidates, Counts counts) {
+    private static void collect(AccessibilityNodeInfo node, List<Candidate> candidates, Counts counts, float density, int screenHeight) {
         if (node == null) {
             return;
         }
@@ -46,41 +47,26 @@ public final class AccessibilityTextExtractor {
         if (raw != null && raw.length() > 0) {
             counts.extracted++;
             String value = TextNormalizer.normalize(raw.toString());
-            if (isCandidate(node, value)) {
-                Rect rect = new Rect();
-                node.getBoundsInScreen(rect);
+            Rect rect = new Rect();
+            node.getBoundsInScreen(rect);
+            String reason = ChatGptUiFilter.exclusionReason(node, value, rect, density, screenHeight);
+            if (reason == null) {
                 candidates.add(new Candidate(value, rect));
             } else {
                 counts.excluded++;
+                DiagnosticCounters.inc(reason);
             }
         }
         for (int i = 0; i < node.getChildCount(); i++) {
             AccessibilityNodeInfo child = node.getChild(i);
             try {
-                collect(child, candidates, counts);
+                collect(child, candidates, counts, density, screenHeight);
             } finally {
                 if (child != null) {
                     child.recycle();
                 }
             }
         }
-    }
-
-    private static boolean isCandidate(AccessibilityNodeInfo node, String value) {
-        if (value.length() < 8 || !node.isVisibleToUser()) {
-            return false;
-        }
-        CharSequence className = node.getClassName();
-        String klass = className == null ? "" : className.toString().toLowerCase(Locale.ROOT);
-        if (klass.contains("edittext") || klass.contains("button") || klass.contains("tab")) {
-            return false;
-        }
-        String lower = value.toLowerCase(Locale.ROOT);
-        return !lower.contains("chatgpt")
-                && !lower.contains("send")
-                && !lower.contains("message")
-                && !lower.contains("ログイン")
-                && !lower.contains("設定");
     }
 
     private static final class Candidate {

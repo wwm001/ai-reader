@@ -2,7 +2,15 @@ plugins {
     id "com.android.application"
 }
 
-def commitSha = providers.environmentVariable("GITHUB_SHA").map { it.take(12) }.orElse("local")
+def localCommitSha = "local"
+try {
+    localCommitSha = providers.exec {
+        commandLine "git", "rev-parse", "--short=12", "HEAD"
+    }.standardOutput.asText.get().trim()
+} catch (ignored) {
+    localCommitSha = "local"
+}
+def commitSha = providers.environmentVariable("GITHUB_SHA").map { it.take(12) }.orElse(localCommitSha)
 
 android {
     namespace "com.example.chatgptreader"
@@ -12,8 +20,8 @@ android {
         applicationId "com.example.chatgptreader"
         minSdk 26
         targetSdk 35
-        versionCode 2
-        versionName "0.1.1"
+        versionCode 3
+        versionName "0.1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "BUILD_COMMIT_SHA", "\"${commitSha.get()}\""
     }
